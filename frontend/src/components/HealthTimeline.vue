@@ -1,10 +1,8 @@
 <script setup lang="ts">
 import type { HealthRecord } from '../types'
 import { healthApi } from '../api/health'
-import { t } from '../composables/useI18n'
-import { useToast } from '../composables/useToast'
 
-defineProps<{
+const props = defineProps<{
   records: HealthRecord[]
 }>()
 
@@ -12,50 +10,45 @@ const emit = defineEmits<{
   refresh: []
 }>()
 
-const typeConfig: Record<string, { labelKey: string; icon: string; color: string }> = {
-  vaccine: { labelKey: 'health.type.vaccine', icon: '💉', color: 'var(--info)' },
-  deworming: { labelKey: 'health.type.deworming', icon: '🛡️', color: 'var(--success)' },
-  checkup: { labelKey: 'health.type.checkup', icon: '🏥', color: 'var(--warning)' },
+const typeConfig: Record<string, { label: string; icon: string; color: string }> = {
+  vaccine: { label: '疫苗', icon: '💉', color: '#3b82f6' },
+  deworming: { label: '驱虫', icon: '🛡️', color: '#22c55e' },
+  checkup: { label: '体检', icon: '🏥', color: '#f59e0b' },
 }
-const { error: toastError } = useToast()
 
 function getConfig(type: string) {
-  return (
-    typeConfig[type] || { labelKey: '', label: type, icon: '📋', color: 'var(--fg-tertiary)' }
-  )
+  return typeConfig[type] || { label: type, icon: '📋', color: '#a8a29e' }
 }
 
 async function deleteRecord(record: HealthRecord) {
-  if (!confirm(t('confirm.deleteHealth', { name: record.name }))) return
+  if (!confirm(`确定删除 "${record.name}" 吗？`)) return
   try {
     await healthApi.delete(record.pet_id, record.id)
     emit('refresh')
-  } catch (err) {
-    toastError(t('error.deleteFailed') + (err as Error).message)
-  }
+  } catch {}
 }
 </script>
 
 <template>
   <div class="health-timeline">
     <div v-if="records.length === 0" class="empty-state">
-      <p>{{ t('health.empty') }}</p>
+      <p>暂无健康记录</p>
     </div>
     <div v-for="record in records" :key="record.id" class="timeline-item">
       <div class="timeline-dot" :style="{ background: getConfig(record.type).color }"></div>
       <div class="timeline-content">
         <div class="timeline-header">
           <span class="timeline-icon">{{ getConfig(record.type).icon }}</span>
-          <span class="timeline-type">{{ getConfig(record.type).labelKey ? t(getConfig(record.type).labelKey) : record.type }}</span>
+          <span class="timeline-type">{{ getConfig(record.type).label }}</span>
           <span class="timeline-name">{{ record.name }}</span>
-          <button class="btn-icon" :aria-label="t('form.delete')" @click="deleteRecord(record)">×</button>
+          <button class="btn-icon" @click="deleteRecord(record)">×</button>
         </div>
         <div class="timeline-date">{{ record.date }}</div>
         <div v-if="record.next_date" class="timeline-next">
-          {{ t('health.next') }}{{ record.next_date }}
+          下次：{{ record.next_date }}
         </div>
         <div v-if="record.report_url" class="timeline-report">
-          <a :href="record.report_url" target="_blank" rel="noopener" @click.stop>{{ t('health.viewReport') }}</a>
+          <a :href="record.report_url" target="_blank" @click.stop>📄 查看体检报告</a>
         </div>
         <div v-if="record.note" class="timeline-note">{{ record.note }}</div>
       </div>

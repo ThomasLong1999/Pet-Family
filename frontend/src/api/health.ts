@@ -1,4 +1,4 @@
-import { request, upload } from './client'
+import { request, upload, API_BASE } from './client'
 import type { HealthRecord, CreateHealthRequest, UpdateHealthRequest } from '../types'
 
 export const healthApi = {

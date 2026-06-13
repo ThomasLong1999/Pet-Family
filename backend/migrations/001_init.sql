@@ -32,7 +32,6 @@ CREATE TABLE IF NOT EXISTS health_records (
     date TEXT NOT NULL,
     next_date TEXT,
     note TEXT,
-    report_url TEXT NOT NULL DEFAULT '',
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

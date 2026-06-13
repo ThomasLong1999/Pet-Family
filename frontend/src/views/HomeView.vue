@@ -2,7 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { dashboardApi } from '../api/dashboard'
 import { petsApi } from '../api/pets'
-import { t, setLocale, isZh } from '../composables/useI18n'
+import { t, setLocale, getLocale, isZh } from '../composables/useI18n'
 import PetCard from '../components/PetCard.vue'
 import AddPetCard from '../components/AddPetCard.vue'
 import PetDetail from '../components/PetDetail.vue'
@@ -60,25 +60,20 @@ async function refreshData() {
           <h1 class="header-title">{{ t('app.title') }}</h1>
         </div>
         <div class="header-actions">
-          <button
-            class="btn btn-primary"
-            :aria-label="t('btn.addPet')"
-            @click="openAddForm"
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <button class="btn btn-primary" @click="openAddForm">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
               <line x1="8" y1="2" x2="8" y2="14" /><line x1="2" y1="8" x2="14" y2="8" />
             </svg>
             {{ t('btn.addPet') }}
           </button>
-          <button class="btn btn-ghost lang-btn" :aria-label="isZh ? 'English' : '中文'" @click="toggleLocale">{{ t('lang.toggle') }}</button>
+          <button class="btn btn-ghost lang-btn" @click="toggleLocale">{{ t('lang.toggle') }}</button>
         </div>
       </div>
     </header>
 
     <main class="pet-grid-container">
       <div class="pet-grid">
-        <PetCard
-v-for="(pet, index) in pets" :key="pet.id"
+        <PetCard v-for="(pet, index) in pets" :key="pet.id"
           :pet="pet" :summary="getPetSummary(pet.id)"
           :reminders="(dashboard?.reminders ?? []).filter(r => r.pet_id === pet.id)"
           :style="{ animationDelay: `${index * 60}ms` }" class="pet-card-animate"
@@ -93,29 +88,13 @@ v-for="(pet, index) in pets" :key="pet.id"
     </main>
 
     <Transition name="overlay">
-      <div
-        v-if="showDetail && selectedPet"
-        class="overlay"
-        role="dialog"
-        aria-modal="true"
-        :aria-label="selectedPet.name"
-        @click.self="closeDetail"
-        @keydown.esc="closeDetail"
-      >
+      <div v-if="showDetail && selectedPet" class="overlay" @click.self="closeDetail">
         <PetDetail :pet="selectedPet" @close="closeDetail" @updated="handlePetUpdated" />
       </div>
     </Transition>
 
     <Transition name="overlay">
-      <div
-        v-if="showAddForm"
-        class="overlay"
-        role="dialog"
-        aria-modal="true"
-        :aria-label="t('form.addPet')"
-        @click.self="closeAddForm"
-        @keydown.esc="closeAddForm"
-      >
+      <div v-if="showAddForm" class="overlay" @click.self="closeAddForm">
         <PetForm @close="closeAddForm" @saved="handlePetAdded" />
       </div>
     </Transition>

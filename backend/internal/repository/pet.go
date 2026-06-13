@@ -44,6 +44,7 @@ func (r *PetRepo) GetByID(id string) (*model.Pet, error) {
 
 func (r *PetRepo) Create(req model.CreatePetRequest) (*model.Pet, error) {
 	id := uuid.New().String()
+	now := "datetime('now')"
 
 	// Use a transaction to handle the default timestamp
 	tx, err := r.db.Begin()
@@ -70,6 +71,7 @@ func (r *PetRepo) Create(req model.CreatePetRequest) (*model.Pet, error) {
 		return nil, err
 	}
 
+	_ = now
 	return &p, nil
 }
 

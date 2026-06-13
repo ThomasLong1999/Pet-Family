@@ -3,8 +3,6 @@ import { computed, ref } from 'vue'
 import type { Pet, PetSummary, HealthReminder } from '../types'
 import { petsApi } from '../api/pets'
 import { t } from '../composables/useI18n'
-import { ageLabel } from '../composables/usePetAge'
-import { useToast } from '../composables/useToast'
 import AvatarCropper from './AvatarCropper.vue'
 
 const props = defineProps<{ pet: Pet; summary: PetSummary | null; reminders: HealthReminder[] }>()
@@ -13,7 +11,6 @@ const emit = defineEmits<{ click: []; avatarChanged: [] }>()
 const uploading = ref(false)
 const fileInput = ref<HTMLInputElement | null>(null)
 const cropSrc = ref<string | null>(null)
-const { error: toastError } = useToast()
 
 const speciesIcon = computed(() => {
   const map: Record<string, string> = { cat: '🐱', dog: '🐶', hamster: '🐹', rabbit: '🐰' }
@@ -30,12 +27,22 @@ const genderText = computed(() =>
   props.pet.gender === 'male' ? '♂' : props.pet.gender === 'female' ? '♀' : ''
 )
 const genderColor = computed(() =>
-  props.pet.gender === 'male' ? 'var(--info)' : props.pet.gender === 'female' ? 'var(--pink)' : 'var(--fg-tertiary)'
+  props.pet.gender === 'male' ? '#3b82f6' : props.pet.gender === 'female' ? '#ec4899' : 'var(--fg-tertiary)'
 )
 
 const ageDisplay = computed(() => {
   if (props.pet.passed_at) return `${props.pet.birthday} — ${props.pet.passed_at}`
-  return ageLabel(props.pet.birthday)
+  if (!props.pet.birthday) return ''
+  const bd = new Date(props.pet.birthday)
+  const now = new Date()
+  const months = (now.getFullYear() - bd.getFullYear()) * 12 + (now.getMonth() - bd.getMonth())
+  if (months < 1) return t('pet.age.lessThan1')
+  if (months < 12) return t('pet.age.months', { n: months })
+  const years = Math.floor(months / 12)
+  const remainMonths = months % 12
+  return remainMonths === 0
+    ? t('pet.age.yearsRound', { y: years })
+    : t('pet.age.years', { y: years, m: remainMonths })
 })
 
 const latestWeight = computed(() => props.summary?.latest_weight ?? null)
@@ -46,7 +53,7 @@ const weightTrendIcon = computed(() => {
 })
 const weightTrendColor = computed(() => {
   if (!weightTrend.value) return 'var(--fg-tertiary)'
-  return weightTrend.value > 0.05 ? 'var(--warning)' : weightTrend.value < -0.05 ? 'var(--success)' : 'var(--fg-tertiary)'
+  return weightTrend.value > 0.05 ? '#f59e0b' : weightTrend.value < -0.05 ? '#22c55e' : 'var(--fg-tertiary)'
 })
 const hasReminders = computed(() => props.reminders.length > 0)
 
@@ -74,7 +81,7 @@ async function onCropConfirm(blob: Blob) {
     await petsApi.uploadAvatar(props.pet.id, file)
     emit('avatarChanged')
   } catch (err) {
-    toastError(t('error.uploadFailed') + (err as Error).message)
+    console.error('Avatar upload failed:', err)
   } finally {
     uploading.value = false
   }
@@ -94,8 +101,7 @@ function onCropCancel() {
     <div v-if="hasReminders" class="reminder-bubble" @click="onBubbleClick">
       <span class="bubble-count">{{ reminders.length }}</span>
       <div class="reminder-popover">
-        <div
-v-for="r in reminders" :key="r.name + r.next_date" class="reminder-item"
+        <div v-for="r in reminders" :key="r.name + r.next_date" class="reminder-item"
           :class="{ urgent: r.days_left <= 3, warning: r.days_left > 3 }">
           <span class="reminder-name">{{ r.name }}</span>
           <span class="reminder-date">{{ t('reminder.daysLeft', { n: r.days_left }) }}</span>
@@ -105,9 +111,9 @@ v-for="r in reminders" :key="r.name + r.next_date" class="reminder-item"
 
     <!-- Left: Photo -->
     <div class="card-photo-side">
-      <img v-if="pet.avatar_url" :src="pet.avatar_url" :alt="pet.name" class="card-photo" loading="lazy" />
+      <img v-if="pet.avatar_url" :src="pet.avatar_url" :alt="pet.name" class="card-photo" />
       <div v-else class="card-photo-placeholder">{{ speciesIcon }}</div>
-      <button class="avatar-upload-btn" :aria-label="t('form.avatar')" :disabled="uploading" @click="onUploadClick">
+      <button class="avatar-upload-btn" @click="onUploadClick" :disabled="uploading">
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
           <path d="M10.5 3.5L9 2a2.5 2.5 0 10-.6.6L10.5 3.5z" />
         </svg>
@@ -172,7 +178,7 @@ v-for="r in reminders" :key="r.name + r.next_date" class="reminder-item"
   gap: 0.375rem; font-size: 0.6875rem;
 }
 .reminder-item.urgent { background: var(--danger-soft); color: var(--danger); }
-.reminder-item.warning { background: var(--warning-soft); color: var(--warning); }
+.reminder-item.warning { background: var(--warning-soft); color: #92400e; }
 .reminder-name { font-weight: 600; }
 .reminder-date { white-space: nowrap; font-weight: 500; }
 

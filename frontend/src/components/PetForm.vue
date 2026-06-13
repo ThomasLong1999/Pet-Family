@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { ref, onBeforeUnmount } from 'vue'
+import { ref } from 'vue'
 import type { CreatePetRequest } from '../types'
 import { petsApi } from '../api/pets'
 import { onDateBlur } from '../composables/smartDate'
 import { t } from '../composables/useI18n'
-import { useToast } from '../composables/useToast'
 
 const emit = defineEmits<{ close: []; saved: [] }>()
 
@@ -13,7 +12,6 @@ const form = ref<CreatePetRequest & { adopted_at: string }>({
 })
 const saving = ref(false)
 const avatarFile = ref<File | null>(null)
-const { error: toastError } = useToast()
 const avatarPreview = ref<string | null>(null)
 
 const speciesOptions = [
@@ -26,8 +24,6 @@ const speciesOptions = [
 function onAvatarSelected(e: Event) {
   const input = e.target as HTMLInputElement
   if (!input.files?.length) return
-  // Revoke previous preview if re-selecting
-  if (avatarPreview.value) URL.revokeObjectURL(avatarPreview.value)
   avatarFile.value = input.files[0]
   avatarPreview.value = URL.createObjectURL(avatarFile.value)
 }
@@ -39,24 +35,12 @@ async function submit() {
     const payload: CreatePetRequest = { ...form.value, adopted_at: form.value.adopted_at || null }
     const pet = await petsApi.create(payload)
     if (avatarFile.value) {
-      try {
-        await petsApi.uploadAvatar(pet.id, avatarFile.value)
-      } catch (err) {
-        toastError(t('error.uploadFailed') + (err as Error).message)
-      }
+      try { await petsApi.uploadAvatar(pet.id, avatarFile.value) } catch {}
     }
     emit('saved')
-  } catch (err) {
-    toastError(t('error.saveFailed') + (err as Error).message)
-  } finally {
-    saving.value = false
-  }
+  } catch (err) { alert('Error: ' + (err as Error).message) }
+  finally { saving.value = false }
 }
-
-// Release object URL when the form is closed/unmounted
-onBeforeUnmount(() => {
-  if (avatarPreview.value) URL.revokeObjectURL(avatarPreview.value)
-})
 </script>
 
 <template>
@@ -65,7 +49,7 @@ onBeforeUnmount(() => {
       <h2>{{ t('form.addPet') }}</h2>
       <button class="btn btn-ghost" @click="emit('close')">{{ t('form.cancel') }}</button>
     </div>
-    <form class="pet-form" @submit.prevent="submit">
+    <form @submit.prevent="submit" class="pet-form">
       <div class="avatar-section">
         <label class="form-label">{{ t('form.avatar') }}</label>
         <div class="avatar-upload-area" @click="($refs.avatarInput as HTMLInputElement)?.click()">

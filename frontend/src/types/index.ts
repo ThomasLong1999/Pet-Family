@@ -1,14 +1,9 @@
-// Shared domain unions — used across Pet DTOs and components
-export type Species = 'cat' | 'dog' | 'hamster' | 'rabbit'
-export type Gender = 'male' | 'female'
-export type HealthType = 'vaccine' | 'deworming' | 'checkup'
-
 export interface Pet {
   id: string
-  species: Species
+  species: 'cat' | 'dog' | 'hamster' | 'rabbit'
   name: string
   breed: string
-  gender: Gender
+  gender: 'male' | 'female'
   birthday: string
   color: string
   avatar_url: string
@@ -21,10 +16,10 @@ export interface Pet {
 }
 
 export interface CreatePetRequest {
-  species: Species
+  species: string
   name: string
   breed: string
-  gender: Gender
+  gender: string
   birthday: string
   color: string
   adopted_at?: string | null
@@ -32,10 +27,10 @@ export interface CreatePetRequest {
 }
 
 export interface UpdatePetRequest {
-  species?: Species
+  species?: string
   name?: string
   breed?: string
-  gender?: Gender
+  gender?: string
   birthday?: string
   color?: string
   adopted_at?: string | null
@@ -61,7 +56,7 @@ export interface CreateWeightRequest {
 export interface HealthRecord {
   id: string
   pet_id: string
-  type: HealthType
+  type: 'vaccine' | 'deworming' | 'checkup'
   name: string
   date: string
   next_date: string | null
@@ -72,7 +67,7 @@ export interface HealthRecord {
 }
 
 export interface CreateHealthRequest {
-  type: HealthType
+  type: string
   name: string
   date: string
   next_date?: string | null
@@ -80,7 +75,7 @@ export interface CreateHealthRequest {
 }
 
 export interface UpdateHealthRequest {
-  type?: HealthType
+  type?: string
   name?: string
   date?: string
   next_date?: string | null
@@ -99,7 +94,7 @@ export interface Photo {
 export interface PetSummary {
   id: string
   name: string
-  species: Species
+  species: string
   avatar_url: string
   dominant_color: string
   latest_weight: number | null
@@ -110,7 +105,7 @@ export interface PetSummary {
 export interface HealthReminder {
   pet_id: string
   pet_name: string
-  record_type: HealthType
+  record_type: string
   name: string
   next_date: string
   days_left: number

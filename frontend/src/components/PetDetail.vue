@@ -7,8 +7,6 @@ import { healthApi } from '../api/health'
 import { photosApi } from '../api/photos'
 import { smartDate } from '../composables/smartDate'
 import { t } from '../composables/useI18n'
-import { ageLabel } from '../composables/usePetAge'
-import { useToast } from '../composables/useToast'
 import AvatarCropper from './AvatarCropper.vue'
 import WeightChart from './WeightChart.vue'
 import HealthTimeline from './HealthTimeline.vue'
@@ -34,7 +32,6 @@ const photos = ref<Photo[]>([])
 const showWeightForm = ref(false)
 const showHealthForm = ref(false)
 const showEditForm = ref(false)
-const { error: toastError } = useToast()
 
 watch(() => props.pet, (p) => { pet.value = { ...p } })
 
@@ -53,16 +50,14 @@ async function loadData() {
     healthRecords.value = h
     photos.value = p
   } catch (err) {
-    toastError(t('error.loadFailed') + (err as Error).message)
+    console.error('Failed to load pet data:', err)
   }
 }
 
 async function refreshPet() {
   try {
     pet.value = await petsApi.get(pet.value.id)
-  } catch (err) {
-    toastError(t('error.loadFailed') + (err as Error).message)
-  }
+  } catch {}
 }
 
 async function onWeightAdded() {
@@ -97,7 +92,7 @@ async function onCropConfirm(blob: Blob) {
     pet.value = { ...pet.value, avatar_url: result.avatar_url, dominant_color: result.dominant_color }
     emit('updated')
   } catch (err) {
-    toastError(t('error.uploadFailed') + (err as Error).message)
+    console.error('Avatar upload failed:', err)
   }
 }
 
@@ -112,7 +107,7 @@ async function deletePet() {
     await petsApi.delete(pet.value.id)
     emit('updated')
   } catch (err) {
-    toastError(t('error.deleteFailed') + (err as Error).message)
+    console.error('Delete failed:', err)
   }
 }
 
@@ -126,18 +121,18 @@ async function markPassed() {
     await refreshPet()
     emit('updated')
   } catch (err) {
-    toastError(t('error.saveFailed') + (err as Error).message)
+    alert('Error: ' + (err as Error).message)
   }
 }
 
 async function clearPassed() {
   if (!confirm(t('passed.clear.confirm', { name: pet.value.name }))) return
   try {
-    await petsApi.update(pet.value.id, { passed_at: null })
+    await petsApi.update(pet.value.id, { passed_at: '' })
     await refreshPet()
     emit('updated')
   } catch (err) {
-    toastError(t('error.saveFailed') + (err as Error).message)
+    alert('保存失败：' + (err as Error).message)
   }
 }
 
@@ -151,43 +146,33 @@ const speciesIcon = computed(() => {
   return map[pet.value.species] || '🐾'
 })
 
-const genderText = computed(() => {
-  if (pet.value.gender === 'male') return t('form.gender.male')
-  if (pet.value.gender === 'female') return t('form.gender.female')
-  return ''
+const ageText = computed(() => {
+  if (!pet.value.birthday) return ''
+  const bd = new Date(pet.value.birthday)
+  const now = new Date()
+  const months = (now.getFullYear() - bd.getFullYear()) * 12 + (now.getMonth() - bd.getMonth())
+  if (months < 1) return '< 1个月'
+  if (months < 12) return `${months}个月`
+  const years = Math.floor(months / 12)
+  const remainMonths = months % 12
+  if (remainMonths === 0) return `${years}岁`
+  return `${years}岁${remainMonths}个月`
 })
-
-const ageText = computed(() => ageLabel(pet.value.birthday))
 </script>
 
 <template>
-  <div
-    class="detail-panel"
-    role="dialog"
-    aria-modal="true"
-    :aria-label="pet.name"
-    @click.stop
-    @keydown.esc="emit('close')"
-  >
+  <div class="detail-panel" @click.stop>
     <!-- Close button -->
-    <button class="close-btn" :aria-label="t('form.cancel')" @click="emit('close')">
-      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+    <button class="close-btn" @click="emit('close')">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
         <line x1="4" y1="4" x2="16" y2="16" /><line x1="16" y1="4" x2="4" y2="16" />
       </svg>
     </button>
 
     <!-- Header area -->
     <div class="detail-header">
-      <div
-        class="avatar-upload-area"
-        role="button"
-        tabindex="0"
-        :aria-label="t('form.avatar')"
-        @click="onAvatarClick"
-        @keydown.enter.prevent="onAvatarClick"
-        @keydown.space.prevent="onAvatarClick"
-      >
-        <img v-if="pet.avatar_url" :src="pet.avatar_url" :alt="pet.name" class="detail-avatar" />
+      <div class="avatar-upload-area" @click="onAvatarClick">
+        <img v-if="pet.avatar_url" :src="pet.avatar_url" class="detail-avatar" />
         <div v-else class="detail-avatar-placeholder">{{ speciesIcon }}</div>
         <div class="avatar-overlay">
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="white" stroke-width="1.5">
@@ -202,7 +187,7 @@ const ageText = computed(() => ageLabel(pet.value.birthday))
           <h2 class="detail-name">{{ pet.name }}</h2>
           <span class="species-badge-sm">{{ speciesIcon }}</span>
         </div>
-        <p class="detail-breed">{{ pet.breed }} · {{ genderText }} · {{ ageText }}</p>
+        <p class="detail-breed">{{ pet.breed }} · {{ pet.gender === 'male' ? '公' : pet.gender === 'female' ? '母' : '' }} · {{ ageText }}</p>
         <p v-if="pet.color" class="detail-color">{{ pet.color }}</p>
       </div>
     </div>
@@ -231,7 +216,7 @@ const ageText = computed(() => ageLabel(pet.value.birthday))
           </div>
           <div class="info-item">
             <span class="info-label">{{ t('info.gender') }}</span>
-            <span class="info-value">{{ genderText || '-' }}</span>
+            <span class="info-value">{{ pet.gender === 'male' ? '公' : pet.gender === 'female' ? '母' : '-' }}</span>
           </div>
           <div class="info-item">
             <span class="info-label">{{ t('info.birthday') }}</span>
@@ -274,7 +259,7 @@ const ageText = computed(() => ageLabel(pet.value.birthday))
           <div v-for="w in weights" :key="w.id" class="weight-item">
             <span class="weight-date">{{ w.recorded_at.slice(0, 10) }}</span>
             <span class="weight-value">{{ w.weight.toFixed(2) }} kg</span>
-            <button class="btn-icon" :aria-label="t('form.delete')" @click="async () => { await weightsApi.delete(pet.id, w.id); weights = await weightsApi.list(pet.id) }">×</button>
+            <button class="btn-icon" @click="async () => { await weightsApi.delete(pet.id, w.id); weights = await weightsApi.list(pet.id) }">×</button>
           </div>
         </div>
       </div>
@@ -283,7 +268,7 @@ const ageText = computed(() => ageLabel(pet.value.birthday))
       <div v-if="activeTab === 'health'" class="tab-content">
         <div class="tab-header">
           <h3>{{ t('health.title') }}</h3>
-          <button class="btn btn-primary btn-sm" @click="showHealthForm = true">{{ t('health.add') }}</button>
+          <button class="btn btn-primary btn-sm" @click="showHealthForm = true">添加记录</button>
         </div>
         <HealthTimeline :records="healthRecords" @refresh="async () => { healthRecords = await healthApi.list(pet.id) }" />
       </div>
@@ -296,21 +281,21 @@ const ageText = computed(() => ageLabel(pet.value.birthday))
 
     <!-- Edit form modal -->
     <Transition name="overlay">
-      <div v-if="showEditForm" class="mini-overlay" role="dialog" aria-modal="true" :aria-label="t('form.editPet')" @click.self="showEditForm = false" @keydown.esc="showEditForm = false">
+      <div v-if="showEditForm" class="mini-overlay" @click.self="showEditForm = false">
         <PetEditForm :pet="pet" @close="showEditForm = false" @saved="onPetSaved" />
       </div>
     </Transition>
 
     <!-- Weight form modal -->
     <Transition name="overlay">
-      <div v-if="showWeightForm" class="mini-overlay" role="dialog" aria-modal="true" :aria-label="t('weight.record')" @click.self="showWeightForm = false" @keydown.esc="showWeightForm = false">
+      <div v-if="showWeightForm" class="mini-overlay" @click.self="showWeightForm = false">
         <WeightForm :pet-id="pet.id" @close="showWeightForm = false" @saved="onWeightAdded" />
       </div>
     </Transition>
 
     <!-- Health form modal -->
     <Transition name="overlay">
-      <div v-if="showHealthForm" class="mini-overlay" role="dialog" aria-modal="true" :aria-label="t('health.add')" @click.self="showHealthForm = false" @keydown.esc="showHealthForm = false">
+      <div v-if="showHealthForm" class="mini-overlay" @click.self="showHealthForm = false">
         <HealthForm :pet-id="pet.id" @close="showHealthForm = false" @saved="onHealthAdded" />
       </div>
     </Transition>
