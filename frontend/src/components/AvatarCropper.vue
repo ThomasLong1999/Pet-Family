@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { t } from '../composables/useI18n'
 
 const props = defineProps<{ src: string }>()
 const emit = defineEmits<{ confirm: [blob: Blob]; cancel: [] }>()
@@ -86,20 +87,21 @@ function confirm() {
 </script>
 
 <template>
-  <div class="cropper-overlay" @click.self="emit('cancel')">
+  <div class="cropper-overlay" role="dialog" aria-modal="true" :aria-label="t('crop.title')" @click.self="emit('cancel')" @keydown.esc="emit('cancel')">
     <div class="cropper-panel">
-      <h3>调整头像</h3>
-      <div class="cropper-area"
+      <h3>{{ t('crop.title') }}</h3>
+      <div
+class="cropper-area"
         @pointerdown="onPointerDown" @pointermove="onPointerMove" @pointerup="onPointerUp" @pointerleave="onPointerUp"
         @wheel="onWheel">
-        <canvas ref="canvas" width="280" height="280" class="cropper-canvas" />
+        <canvas ref="canvas" width="280" height="280" class="cropper-canvas" :aria-label="t('crop.hint')" />
       </div>
       <div class="cropper-controls">
-        <input type="range" min="0.1" max="5" step="0.01" :value="scale" @input="onSliderChange" class="zoom-slider" />
+        <input type="range" min="0.1" max="5" step="0.01" :value="scale" class="zoom-slider" :aria-label="t('crop.hint')" @input="onSliderChange" />
       </div>
       <div class="cropper-actions">
-        <button class="btn btn-ghost" @click="emit('cancel')">取消</button>
-        <button class="btn btn-primary" @click="confirm">确认</button>
+        <button class="btn btn-ghost" @click="emit('cancel')">{{ t('form.cancel') }}</button>
+        <button class="btn btn-primary" @click="confirm">{{ t('crop.confirm') }}</button>
       </div>
     </div>
   </div>
