@@ -1,4 +1,4 @@
-# Cat Manager - 猫咪管理工具
+# Pet Manager - 宠物管理工具
 
 **[English](README_EN.md)**
 

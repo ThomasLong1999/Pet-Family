@@ -1,4 +1,4 @@
-# Cat Manager
+# Pet Manager
 
 **[中文](README.md)**
 
