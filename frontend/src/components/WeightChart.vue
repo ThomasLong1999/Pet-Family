@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed } from 'vue'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { LineChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent } from 'echarts/components'
 import VChart from 'vue-echarts'
 import type { WeightRecord } from '../types'
+import { t } from '../composables/useI18n'
 
 use([CanvasRenderer, LineChart, GridComponent, TooltipComponent])
 
@@ -13,9 +14,13 @@ const props = defineProps<{
   weights: WeightRecord[]
 }>()
 
-const chartOption = computed(() => {
-  if (!props.weights.length) return {}
+// Design tokens as hex literals (ECharts can't read CSS variables directly)
+const FG_PRIMARY = '#1c1917'
+const FG_TERTIARY = '#78716c' // matches --fg-tertiary (WCAG AA)
+const BG_SUBTLE = '#f5f5f4'
+const BG_MUTED = '#e7e5e4'
 
+const chartOption = computed(() => {
   const sorted = [...props.weights].sort((a, b) =>
     a.recorded_at.localeCompare(b.recorded_at)
   )
@@ -24,27 +29,27 @@ const chartOption = computed(() => {
     grid: { left: 45, right: 16, top: 16, bottom: 30 },
     tooltip: {
       trigger: 'axis' as const,
-      formatter: (params: any) => {
+      formatter: (params: { axisValue: string; value: number }[]) => {
         const p = params[0]
         return `${p.axisValue}<br/><strong>${p.value} kg</strong>`
       },
       backgroundColor: 'rgba(255,255,255,0.95)',
-      borderColor: '#e7e5e4',
-      textStyle: { color: '#1c1917', fontFamily: 'Plus Jakarta Sans', fontSize: 13 },
+      borderColor: BG_MUTED,
+      textStyle: { color: FG_PRIMARY, fontSize: 13 },
     },
     xAxis: {
       type: 'category' as const,
       data: sorted.map(w => w.recorded_at.slice(0, 10)),
       axisLine: { show: false },
       axisTick: { show: false },
-      axisLabel: { color: '#a8a29e', fontSize: 11 },
+      axisLabel: { color: FG_TERTIARY, fontSize: 11 },
     },
     yAxis: {
       type: 'value' as const,
       axisLine: { show: false },
       axisTick: { show: false },
-      splitLine: { lineStyle: { color: '#f5f5f4' } },
-      axisLabel: { color: '#a8a29e', fontSize: 11, formatter: '{value} kg' },
+      splitLine: { lineStyle: { color: BG_SUBTLE } },
+      axisLabel: { color: FG_TERTIARY, fontSize: 11, formatter: '{value} kg' },
     },
     series: [{
       type: 'line',
@@ -52,8 +57,8 @@ const chartOption = computed(() => {
       smooth: true,
       symbol: 'circle',
       symbolSize: 6,
-      lineStyle: { width: 2.5, color: '#1c1917' },
-      itemStyle: { color: '#1c1917', borderColor: '#fff', borderWidth: 2 },
+      lineStyle: { width: 2.5, color: FG_PRIMARY },
+      itemStyle: { color: FG_PRIMARY, borderColor: '#fff', borderWidth: 2 },
       areaStyle: {
         color: {
           type: 'linear' as const,
@@ -72,7 +77,7 @@ const chartOption = computed(() => {
 <template>
   <div class="weight-chart">
     <div v-if="weights.length === 0" class="empty-chart">
-      <p>暂无体重记录</p>
+      <p>{{ t('weight.empty') }}</p>
     </div>
     <VChart v-else :option="chartOption" autoresize style="height: 200px; width: 100%;" />
   </div>

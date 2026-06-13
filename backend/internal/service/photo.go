@@ -52,8 +52,3 @@ func CalculateAgeGroup(birthday string) string {
 	}
 	return fmt.Sprintf("%dy", years)
 }
-
-// keep old unexported version for backward compat in tests if any
-func calculateAgeGroup(birthday string) string {
-	return CalculateAgeGroup(birthday)
-}

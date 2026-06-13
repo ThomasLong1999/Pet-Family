@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, onBeforeUnmount } from 'vue'
 import type { Photo } from '../types'
 import { photosApi } from '../api/photos'
 import { t } from '../composables/useI18n'
+import { useToast } from '../composables/useToast'
 
 const props = defineProps<{
   photos: Photo[]
@@ -79,6 +80,8 @@ function openUploadDialog() {
 function onFileSelected(e: Event) {
   const input = e.target as HTMLInputElement
   if (!input.files?.length) return
+  // Revoke previous preview if re-selecting
+  if (uploadPreview.value) URL.revokeObjectURL(uploadPreview.value)
   uploadFile.value = input.files[0]
   uploadPreview.value = URL.createObjectURL(uploadFile.value)
 }
@@ -90,16 +93,30 @@ async function confirmUpload() {
     await photosApi.upload(props.petId, uploadFile.value, selectedAgeGroup.value, uploadCaption.value || undefined)
     showUploadDialog.value = false
     emit('refresh')
-  } catch (err) { console.error('Upload failed:', err) }
-  finally { uploading.value = false }
+  } catch (err) {
+    toastError(t('error.uploadFailed') + (err as Error).message)
+  } finally {
+    uploading.value = false
+  }
 }
 
 async function deletePhoto(photo: Photo) {
-  if (!confirm('Delete this photo?')) return
-  try { await photosApi.delete(props.petId, photo.id); emit('refresh') } catch {}
+  if (!confirm(t('confirm.deletePhoto'))) return
+  try {
+    await photosApi.delete(props.petId, photo.id)
+    emit('refresh')
+  } catch (err) {
+    toastError(t('error.deleteFailed') + (err as Error).message)
+  }
 }
 
+const { error: toastError } = useToast()
 const viewingPhoto = ref<Photo | null>(null)
+
+// Release object URL when the gallery is unmounted
+onBeforeUnmount(() => {
+  if (uploadPreview.value) URL.revokeObjectURL(uploadPreview.value)
+})
 </script>
 
 <template>
@@ -121,19 +138,27 @@ const viewingPhoto = ref<Photo | null>(null)
     <div v-for="group in sortedGroups" :key="group.key" class="age-group">
       <h4 class="age-group-title">{{ ageGroupLabel(group.key) }}</h4>
       <div class="photo-row">
-        <div v-for="photo in group.photos" :key="photo.id" class="photo-thumb" @click="viewingPhoto = photo">
-          <img :src="photo.url" :alt="photo.caption || ''" />
-          <button class="photo-delete" @click.stop="deletePhoto(photo)">×</button>
+        <div v-for="photo in group.photos" :key="photo.id" class="photo-thumb" role="button" tabindex="0" :aria-label="photo.caption || ''" @click="viewingPhoto = photo" @keydown.enter.prevent="viewingPhoto = photo" @keydown.space.prevent="viewingPhoto = photo">
+          <img :src="photo.url" :alt="photo.caption || ''" loading="lazy" />
+          <button class="photo-delete" :aria-label="t('confirm.deletePhoto')" @click.stop="deletePhoto(photo)">×</button>
         </div>
       </div>
     </div>
 
     <!-- Upload dialog -->
     <Transition name="overlay">
-      <div v-if="showUploadDialog" class="upload-dialog-overlay" @click.self="showUploadDialog = false">
+      <div v-if="showUploadDialog" class="upload-dialog-overlay" role="dialog" aria-modal="true" :aria-label="t('photos.dialog.title')" @click.self="showUploadDialog = false" @keydown.esc="showUploadDialog = false">
         <div class="upload-dialog">
           <h3>{{ t('photos.dialog.title') }}</h3>
-          <div class="upload-file-area" @click="($refs.fileInput as HTMLInputElement)?.click()">
+          <div
+            class="upload-file-area"
+            role="button"
+            tabindex="0"
+            :aria-label="t('photos.dialog.select')"
+            @click="($refs.fileInput as HTMLInputElement)?.click()"
+            @keydown.enter.prevent="($refs.fileInput as HTMLInputElement)?.click()"
+            @keydown.space.prevent="($refs.fileInput as HTMLInputElement)?.click()"
+          >
             <img v-if="uploadPreview" :src="uploadPreview" class="upload-preview" />
             <div v-else class="upload-placeholder">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
@@ -165,8 +190,8 @@ const viewingPhoto = ref<Photo | null>(null)
 
     <!-- Full view -->
     <Transition name="overlay">
-      <div v-if="viewingPhoto" class="photo-viewer" @click="viewingPhoto = null">
-        <img :src="viewingPhoto.url" class="full-photo" />
+      <div v-if="viewingPhoto" class="photo-viewer" role="dialog" aria-modal="true" :aria-label="viewingPhoto.caption || ''" @click="viewingPhoto = null" @keydown.esc="viewingPhoto = null">
+        <img :src="viewingPhoto.url" class="full-photo" :alt="viewingPhoto.caption || ''" loading="lazy" />
         <p v-if="viewingPhoto.caption" class="photo-caption">{{ viewingPhoto.caption }}</p>
       </div>
     </Transition>

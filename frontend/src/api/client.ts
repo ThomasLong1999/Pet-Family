@@ -1,5 +1,15 @@
 const API_BASE = import.meta.env.VITE_API_BASE || '/api/v1'
 
+// Default request timeout (ms). Uploads are exempt since large files may take longer.
+const DEFAULT_TIMEOUT = 15000
+
+function withTimeout(signal?: AbortSignal | null, timeout = DEFAULT_TIMEOUT): AbortSignal {
+  if (signal) return signal
+  const controller = new AbortController()
+  setTimeout(() => controller.abort(), timeout)
+  return controller.signal
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     headers: {
@@ -7,6 +17,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
       ...options?.headers,
     },
     ...options,
+    signal: withTimeout(options?.signal),
   })
 
   if (res.status === 204) return undefined as T
@@ -18,10 +29,11 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   return res.json()
 }
 
-async function upload<T>(path: string, formData: FormData): Promise<T> {
+async function upload<T>(path: string, formData: FormData, signal?: AbortSignal | null): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     method: 'POST',
     body: formData,
+    signal,
   })
 
   if (!res.ok) {

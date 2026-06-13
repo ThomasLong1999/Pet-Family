@@ -4,8 +4,11 @@ export type Locale = 'zh' | 'en'
 
 const locale = ref<Locale>('zh')
 
-export function setLocale(l: Locale) { locale.value = l }
-export function getLocale() { locale.value
+export function setLocale(l: Locale) {
+  locale.value = l
+  document.documentElement.lang = l === 'zh' ? 'zh-CN' : 'en'
+}
+export function getLocale(): Locale {
   return locale.value
 }
 export const isZh = computed(() => locale.value === 'zh')
@@ -138,6 +141,19 @@ const messages: Record<Locale, Record<string, string>> = {
     'passed.prompt': '请输入离开的日期（支持 20260614 或 2026-06-14）：',
     'passed.clear.confirm': '确定要取消{name}的标记吗？',
     'passed.delete.confirm': '确定要删除{name}吗？此操作不可恢复。',
+
+    // Errors
+    'error.saveFailed': '保存失败：',
+    'error.deleteFailed': '删除失败：',
+    'error.uploadFailed': '上传失败：',
+    'error.loadFailed': '加载失败',
+
+    // Common confirms
+    'confirm.deleteHealth': '确定删除 "{name}" 吗？',
+    'confirm.deletePhoto': '确定删除这张照片吗？',
+
+    // Weight form
+    'weight.weightLabel': '体重 (kg)',
   },
   en: {
     'app.title': 'Pet Family',
@@ -254,6 +270,19 @@ const messages: Record<Locale, Record<string, string>> = {
     'passed.prompt': 'Enter the date (e.g. 20260614 or 2026-06-14):',
     'passed.clear.confirm': 'Remove the mark from {name}?',
     'passed.delete.confirm': 'Delete {name}? This cannot be undone.',
+
+    // Errors
+    'error.saveFailed': 'Save failed: ',
+    'error.deleteFailed': 'Delete failed: ',
+    'error.uploadFailed': 'Upload failed: ',
+    'error.loadFailed': 'Failed to load',
+
+    // Common confirms
+    'confirm.deleteHealth': 'Delete "{name}"?',
+    'confirm.deletePhoto': 'Delete this photo?',
+
+    // Weight form
+    'weight.weightLabel': 'Weight (kg)',
   },
 }
 
@@ -267,8 +296,10 @@ export function t(key: string, params?: Record<string, string | number>): string
   return text
 }
 
-/** Species-aware key resolver */
+/** Species-aware key resolver: cats use the default key, others fall back to `.other`. */
 export function speciesKey(species: string, key: string): string {
   if (species === 'cat') return t(key)
-  return t(key + '.other', undefined as any) !== key + '.other' ? t(key + '.other', undefined as any) : t(key)
+  const otherKey = `${key}.other`
+  const msg = messages[locale.value]?.[otherKey] ?? messages.zh[otherKey]
+  return msg ?? t(key)
 }

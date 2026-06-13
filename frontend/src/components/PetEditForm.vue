@@ -3,6 +3,8 @@ import { ref } from 'vue'
 import type { Pet, UpdatePetRequest } from '../types'
 import { petsApi } from '../api/pets'
 import { onDateBlur } from '../composables/smartDate'
+import { t, speciesKey } from '../composables/useI18n'
+import { useToast } from '../composables/useToast'
 
 const props = defineProps<{
   pet: Pet
@@ -14,10 +16,10 @@ const emit = defineEmits<{
 }>()
 
 const form = ref<UpdatePetRequest & {
-  species: string
+  species: Pet['species']
   name: string
   breed: string
-  gender: string
+  gender: Pet['gender']
   birthday: string
   color: string
   adopted_at: string | null
@@ -35,13 +37,14 @@ const form = ref<UpdatePetRequest & {
   note: props.pet.note ?? '',
 })
 
+const { error: toastError } = useToast()
 const saving = ref(false)
 
 const speciesOptions = [
-  { value: 'cat', label: '🐱 猫' },
-  { value: 'dog', label: '🐶 狗' },
-  { value: 'hamster', label: '🐹 仓鼠' },
-  { value: 'rabbit', label: '🐰 兔子' },
+  { value: 'cat', key: 'species.cat' },
+  { value: 'dog', key: 'species.dog' },
+  { value: 'hamster', key: 'species.hamster' },
+  { value: 'rabbit', key: 'species.rabbit' },
 ]
 
 async function submit() {
@@ -61,7 +64,7 @@ async function submit() {
     })
     emit('saved')
   } catch (err) {
-    alert('保存失败：' + (err as Error).message)
+    toastError(t('error.saveFailed') + (err as Error).message)
   } finally {
     saving.value = false
   }
@@ -71,69 +74,69 @@ async function submit() {
 <template>
   <div class="form-panel">
     <div class="form-header">
-      <h2>编辑宠物</h2>
-      <button class="btn btn-ghost" @click="emit('close')">取消</button>
+      <h2>{{ t('form.editPet') }}</h2>
+      <button class="btn btn-ghost" @click="emit('close')">{{ t('form.cancel') }}</button>
     </div>
 
-    <form @submit.prevent="submit" class="pet-form">
+    <form class="pet-form" @submit.prevent="submit">
       <div class="form-row">
         <div class="form-group">
-          <label class="form-label">类型</label>
+          <label class="form-label">{{ t('form.type') }}</label>
           <select v-model="form.species" class="form-input">
             <option v-for="opt in speciesOptions" :key="opt.value" :value="opt.value">
-              {{ opt.label }}
+              {{ t(opt.key) }}
             </option>
           </select>
         </div>
         <div class="form-group">
-          <label class="form-label">名字 *</label>
-          <input v-model="form.name" class="form-input" placeholder="宠物名字" required />
+          <label class="form-label">{{ t('form.name') }} *</label>
+          <input v-model="form.name" class="form-input" :placeholder="t('form.name.ph')" required />
         </div>
       </div>
 
       <div class="form-row">
         <div class="form-group">
-          <label class="form-label">品种</label>
-          <input v-model="form.breed" class="form-input" placeholder="如：英短蓝猫" />
+          <label class="form-label">{{ t('form.breed') }}</label>
+          <input v-model="form.breed" class="form-input" :placeholder="t('form.breed.ph')" />
         </div>
         <div class="form-group">
-          <label class="form-label">性别</label>
+          <label class="form-label">{{ t('form.gender') }}</label>
           <select v-model="form.gender" class="form-input">
-            <option value="male">公 ♂</option>
-            <option value="female">母 ♀</option>
+            <option value="male">{{ t('form.gender.male') }}</option>
+            <option value="female">{{ t('form.gender.female') }}</option>
           </select>
         </div>
       </div>
 
       <div class="form-row">
         <div class="form-group">
-          <label class="form-label">生日 *</label>
-          <input v-model="form.birthday" type="text" class="form-input" placeholder="如 20240301" required @blur="onDateBlur" />
+          <label class="form-label">{{ t('form.birthday') }} *</label>
+          <input v-model="form.birthday" type="text" class="form-input" :placeholder="t('form.birthday.ph')" required @blur="onDateBlur" />
         </div>
         <div class="form-group">
-          <label class="form-label">毛色</label>
-          <input v-model="form.color" class="form-input" placeholder="如：蓝灰色" />
+          <label class="form-label">{{ t('form.color') }}</label>
+          <input v-model="form.color" class="form-input" :placeholder="t('form.color.ph')" />
         </div>
       </div>
 
       <div class="form-row">
         <div class="form-group">
-          <label class="form-label">领养日期</label>
-          <input v-model="form.adopted_at" type="text" class="form-input" placeholder="如 20240415" @blur="onDateBlur" />
+          <label class="form-label">{{ t('form.adoptedAt') }}</label>
+          <input v-model="form.adopted_at" type="text" class="form-input" :placeholder="t('form.adoptedAt.ph')" @blur="onDateBlur" />
         </div>
         <div class="form-group">
-          <label class="form-label">去喵星日期</label>
-          <input v-model="form.passed_at" type="text" class="form-input" placeholder="如 20260614" @blur="onDateBlur" />
+          <label class="form-label">{{ speciesKey(props.pet.species, 'form.passedAt') }}</label>
+          <input v-model="form.passed_at" type="text" class="form-input" :placeholder="t('form.passedAt.ph')" @blur="onDateBlur" />
         </div>
       </div>
 
       <div class="form-group">
-        <label class="form-label">备注</label>
-        <textarea v-model="form.note" class="form-input" rows="2" placeholder="备注信息..."></textarea>
+        <label class="form-label">{{ t('form.note') }}</label>
+        <textarea v-model="form.note" class="form-input" rows="2" :placeholder="t('form.note.ph')"></textarea>
       </div>
 
       <button type="submit" class="btn btn-primary submit-btn" :disabled="saving">
-        {{ saving ? '保存中...' : '保存' }}
+        {{ saving ? t('form.saving') : t('form.saveChanges') }}
       </button>
     </form>
   </div>

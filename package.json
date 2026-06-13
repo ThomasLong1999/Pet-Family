@@ -1,0 +1,17 @@
+{
+  "name": "cat-manager",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "prepare": "husky || true"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.7"
+  },
+  "lint-staged": {
+    "frontend/src/**/*.{ts,vue,css}": [
+      "prettier --write"
+    ]
+  }
+}
